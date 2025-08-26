@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -11,32 +11,46 @@ import { Input } from "./components/ui/input";
 import { Textarea } from "./components/ui/textarea";
 import { Button } from "./components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
-import { Plus, ExternalLink, User } from "lucide-react";
+import { Plus, ExternalLink, User, Loader2 } from "lucide-react";
+import { fetchStacks, createStack } from "./utils/actions";
 
 export default function Home() {
   const [stacks, setStacks] = useState<Stack[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newStackName, setNewStackName] = useState("");
   const [newStackDescription, setNewStackDescription] = useState("");
 
-  const handleCreateStack = () => {
+  useEffect(() => {
+    const loadStacks = async () => {
+      try {
+        setIsLoading(true);
+        const data = await fetchStacks();
+        setStacks(data);
+      } catch (error) {
+        console.error("Failed to fetch stacks:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadStacks();
+  }, []);
+
+  const handleCreateStack = async () => {
     if (!newStackName.trim()) return;
 
-    const newStack: Stack = {
-      id: Date.now().toString(),
-      name: newStackName.trim(),
-      description: newStackDescription.trim(),
-      createdAt: new Date(),
-    };
-
-    setStacks([...stacks, newStack]);
-    setNewStackName("");
-    setNewStackDescription("");
-    setIsCreateModalOpen(false);
+    try {
+      const newStack = await createStack(newStackName, newStackDescription);
+      setStacks([...stacks, newStack]);
+      setNewStackName("");
+      setNewStackDescription("");
+      setIsCreateModalOpen(false);
+    } catch (error) {
+      console.error("Failed to create stack:", error);
+    }
   };
 
   const handleEditStack = (stackId: string) => {
-    // Navigate to workflow builder
     window.location.href = `/workflow/${stackId}`;
   };
 
@@ -66,7 +80,12 @@ export default function Home() {
           </div>
         </div>
         <hr className="mb-12 border-[#E4E8EE]" />
-        {stacks.length === 0 ? (
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-16">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <p className="mt-2 text-sm text-gray-600">Loading stacks...</p>
+          </div>
+        ) : stacks.length === 0 ? (
           /* Empty State */
           <div className="flex flex-col items-center justify-center py-16">
             <Card className="text-start max-w-md p-10 flex flex-col items-start">
@@ -86,7 +105,6 @@ export default function Home() {
             </Card>
           </div>
         ) : (
-          /* Stacks Grid */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {stacks.map((stack) => (
               <Card
@@ -105,7 +123,7 @@ export default function Home() {
                   <Button
                     onClick={() => handleEditStack(stack.id)}
                     variant="outline"
-                    className="w-full flex items-center gap-2 text-gray-700 border-gray-300 hover:bg-gray-50"
+                    className="w-full flex items-center gap-2 text-gray-700 hover:text-[#44924C] border-gray-300 hover:bg-gray-50"
                   >
                     Edit Stack
                     <ExternalLink className="w-4 h-4" />
