@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from .db import SessionLocal, engine, Base
 from .api.stacks import router as stacks_router
+from .api.workflows import router as workflows_router
 
 
 app = FastAPI()
@@ -18,6 +19,7 @@ app.add_middleware(
 )
 
 app.include_router(stacks_router)
+app.include_router(workflows_router)
 
 async def get_db():
     async with SessionLocal() as session:

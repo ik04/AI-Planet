@@ -6,6 +6,7 @@ from ..db import SessionLocal
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
+import uuid
 
 router = APIRouter(prefix="/stacks", tags=["stacks"])
 
@@ -32,9 +33,9 @@ async def get_db():
 @router.post("/", response_model=StackRead)
 async def create_stack(stack: StackCreate, db: AsyncSession = Depends(get_db)):
     new_stack = Stack(
-        id=str(abs(hash(stack.name + (stack.description or "")))),  # Added abs()
+        id=str(uuid.uuid4()),  # Use UUID instead of hash
         name=stack.name,
-        description=stack.description,
+        description=stack.description
     )
     db.add(new_stack)
     await db.commit()
