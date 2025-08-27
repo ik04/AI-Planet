@@ -6,6 +6,8 @@ from ..db import SessionLocal
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from datetime import datetime
+import uuid
+
 
 router = APIRouter(prefix="/workflows", tags=["workflows"])
 
@@ -20,13 +22,9 @@ class WorkflowCreate(BaseModel):
 class WorkflowRead(BaseModel):
     id: str
     stack_id: str
-    name: str
-    description: Optional[str]
     nodes: List[Dict[str, Any]]
     edges: List[Dict[str, Any]]
-    node_data: Dict[str, Any]
-    created_at: datetime
-    updated_at: Optional[datetime]
+    data: Dict[str, Any]
 
     class Config:
         orm_mode = True
@@ -61,38 +59,38 @@ async def list_workflows(stack_id: str, db: AsyncSession = Depends(get_db)):
     )
     return result.scalars().all()
 
-@router.get("/{workflow_id}", response_model=WorkflowRead)
-async def get_workflow(workflow_id: str, db: AsyncSession = Depends(get_db)):
+@router.get("/{stack_id}", response_model=WorkflowRead)
+async def get_workflow(stack_id: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
-        select(Workflow).where(Workflow.id == workflow_id)
+        select(Workflow).where(Workflow.stack_id == stack_id)
     )
     workflow = result.scalar_one_or_none()
+    print("Fetched workflow:", workflow)
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
     return workflow
 
-@router.put("/{workflow_id}", response_model=WorkflowData)
+@router.put("/{stack_id}", response_model=WorkflowData)
 async def update_workflow(
-    workflow_id: str, 
+    stack_id: str, 
     workflow_data: WorkflowData,
     db: AsyncSession = Depends(get_db)
 ):
     # Try to get existing workflow
     result = await db.execute(
-        select(Workflow).where(Workflow.id == workflow_id)
+        select(Workflow).where(Workflow.stack_id == stack_id)
     )
     db_workflow = result.scalar_one_or_none()
     
-    # Create new workflow if it doesn't exist
     if not db_workflow:
         db_workflow = Workflow(
-            id=workflow_id,
+            id=str(uuid.uuid4()),
             nodes=workflow_data.nodes,
             edges=workflow_data.edges,
-            data=workflow_data.data
+            data=workflow_data.data,
+            stack_id=stack_id
         )
         db.add(db_workflow)
-    # Update existing workflow
     else:
         for key, value in workflow_data.dict().items():
             setattr(db_workflow, key, value)
