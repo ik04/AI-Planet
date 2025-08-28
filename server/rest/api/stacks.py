@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from ..models.stack import Stack
-from ..db import SessionLocal
+from models.stack import Stack
+from db import SessionLocal
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime

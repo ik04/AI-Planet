@@ -60,7 +60,6 @@ import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import { saveWorkflowBackend, getWorkflow } from "../../utils/actions";
 
-// Custom Node Component with connection handles
 const CustomNode = ({ data, selected }: any) => {
   const [showApiKey, setShowApiKey] = useState(false);
   const [showSerpApi, setShowSerpApi] = useState(false);
@@ -197,16 +196,8 @@ const CustomNode = ({ data, selected }: any) => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="gpt-5">GPT-5</SelectItem>
-                    <SelectItem value="o4-mini">o4-mini</SelectItem>
-                    <SelectItem value="gemini-2.5-flash">
-                      Gemini 2.5 Flash
-                    </SelectItem>
-                    <SelectItem value="gemini-2.5-pro">
-                      Gemini 2.5 Pro
-                    </SelectItem>
-                    <SelectItem value="gemini-2.5-flash-lite">
-                      Gemini 2.5 Flash Lite
+                    <SelectItem value="gemini-2.0-flash">
+                      Gemini 2.0 Flash
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -401,7 +392,7 @@ const CustomNode = ({ data, selected }: any) => {
                               fd.append("file", file);
 
                               const response = await fetch(
-                                "/api/documents/upload",
+                                `${process.env.NEXT_PUBLIC_SERVER_URL}/workflows/${data.stackId}/upload`,
                                 {
                                   method: "POST",
                                   body: fd,
@@ -498,14 +489,14 @@ const CustomNode = ({ data, selected }: any) => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="text-embedding-3-large">
-                      text-embedding-3-large
+                    <SelectItem value="all-MiniLM-L6-v2">
+                      all-MiniLM-L6-v2
                     </SelectItem>
-                    <SelectItem value="text-embedding-3-small">
-                      text-embedding-3-small
+                    <SelectItem value="intfloat/e5-small">
+                      intfloat/e5-small
                     </SelectItem>
-                    <SelectItem value="gemini-embedding-2">
-                      gemini-embedding-2
+                    <SelectItem value="intfloat/e5-base">
+                      intfloat/e5-base
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -839,6 +830,7 @@ const WorkflowBuilder = ({ params }: { params: Promise<{ id: string }> }) => {
           label: name,
           type: type,
           nodeId: nodeId,
+          stackId: resolvedParams.id,
           updateNodeData: updateNodeData,
           nodeData: nodeData[nodeId] || {},
         },

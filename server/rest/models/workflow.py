@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, JSON, ForeignKey
 from sqlalchemy.orm import relationship
-from ..db import Base
+from db import Base
 
 class Workflow(Base):
     __tablename__ = "workflows"

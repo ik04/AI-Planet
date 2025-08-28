@@ -2,9 +2,9 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
-from .db import SessionLocal, engine, Base
-from .api.stacks import router as stacks_router
-from .api.workflows import router as workflows_router
+from db import SessionLocal, engine, Base
+from api.stacks import router as stacks_router
+from api.workflows import router as workflows_router
 
 
 app = FastAPI()

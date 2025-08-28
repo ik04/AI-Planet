@@ -1,7 +1,7 @@
 from sqlalchemy import Column, String, Text, DateTime
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from ..db import Base
+from db import Base
 from datetime import datetime
 
 class Stack(Base):
