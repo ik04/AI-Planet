@@ -161,7 +161,13 @@ async def build_workflow(stack_id: str, db: AsyncSession = Depends(get_db)):
 
         if context_chunks:
             logger.info(f"🪣 Adding {len(context_chunks)} chunks to Chroma collection")
-            collection = chroma_client.get_or_create_collection(name=f"kb-{stack_id}")
+            collection_name = f"kb-{stack_id}"
+            existing_collections = [c.name for c in chroma_client.list_collections()]
+            if collection_name in existing_collections:
+                chroma_client.delete_collection(name=collection_name)
+
+            # Create a fresh collection
+            collection = chroma_client.get_or_create_collection(name=collection_name)
             embeddings = model.encode(context_chunks).tolist()
             collection.add(
                 documents=context_chunks,
