@@ -51,6 +51,15 @@ class WorkflowData(BaseModel):
     class Config:
         orm_mode = True
 
+class ChatRequest(BaseModel):
+    message: str
+
+class ChatResponse(BaseModel):
+    response: str
+    context_used: dict
+
+
+
 async def get_db():
     async with SessionLocal() as session:
         yield session
@@ -240,6 +249,89 @@ async def build_workflow(stack_id: str, db: AsyncSession = Depends(get_db)):
             "web_search": web_context.split("\n") if web_context else []
         }
     }
+
+@router.post("/{stack_id}/chat", response_model=ChatResponse)
+async def chat_with_workflow(stack_id: str, req: ChatRequest, db: AsyncSession = Depends(get_db)):
+    # 1. Fetch workflow
+    result = await db.execute(select(Workflow).where(Workflow.stack_id == stack_id))
+    workflow = result.scalar_one_or_none()
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+
+    nodes = workflow.nodes or []
+    node_types = {n["data"]["type"]: n for n in nodes}
+
+    if "llm" not in node_types:
+        raise HTTPException(status_code=400, detail="Workflow missing LLM node")
+
+    # 2. User query
+    user_query = req.message
+
+    # 3. Knowledge base (just query existing vectors)
+    retrieved_docs = []
+    model = None
+    collection = None
+
+    if "knowledge-base" in node_types:
+        kb_node = node_types["knowledge-base"]
+        embedding_model_name = (
+            kb_node["data"].get("nodeData", {}).get("embeddingModel", "all-MiniLM-L6-v2")
+        )
+        model = SentenceTransformer(embedding_model_name)
+
+        try:
+            collection = chroma_client.get_collection(name=f"kb-{stack_id}")
+            query_embedding = model.encode(user_query).tolist()
+            results = collection.query(query_embeddings=[query_embedding], n_results=3)
+            retrieved_docs = results["documents"][0]
+        except Exception as e:
+            logger.warning(f"⚠️ No existing Chroma collection for {stack_id}: {e}")
+
+    # 4. LLM Node Config
+    llm_node = node_types["llm"]
+    node_data = llm_node["data"].get("nodeData", {})
+
+    gemini_key = node_data.get("apiKey")
+    gemini_model = node_data.get("model", "gemini-2.0-flash")
+    serpapi_key = node_data.get("serpApi")
+    use_web = node_data.get("webSearch", False)
+
+    if not gemini_key:
+        raise HTTPException(status_code=400, detail="Gemini API key missing")
+
+    genai.configure(api_key=gemini_key)
+
+    # 5. Optional web search
+    web_context = ""
+    if use_web and serpapi_key:
+        try:
+            search = GoogleSearch({"engine": "google", "q": user_query, "api_key": serpapi_key})
+            results = search.get_dict()
+            snippets = []
+            for item in results.get("organic_results", [])[:3]:
+                snippets.append(f"{item.get('title')} ({item.get('link')}): {item.get('snippet')}")
+            web_context = "\n".join(snippets)
+        except Exception as e:
+            logger.error(f"SerpAPI search failed: {e}")
+
+    # 6. Build final prompt
+    kb_context = "\n".join(retrieved_docs) if retrieved_docs else ""
+    combined_context = "\n\n".join([c for c in [kb_context, web_context] if c.strip()])
+    prompt = f"Context:\n{combined_context}\n\nUser Query: {user_query}\nAnswer:"
+
+    # 7. Call Gemini
+    llm = genai.GenerativeModel(gemini_model)
+    response = llm.generate_content(prompt)
+
+    return ChatResponse(
+        response=response.text,
+        context_used={
+            "knowledge_base": retrieved_docs,
+            "web_search": web_context.split("\n") if web_context else []
+        }
+    )
+
+
 
 
 @router.post("/{stack_id}/upload")

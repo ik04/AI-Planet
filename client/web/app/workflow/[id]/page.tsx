@@ -689,6 +689,7 @@ const WorkflowBuilder = ({ params }: { params: Promise<{ id: string }> }) => {
   >([]);
   const [chatInput, setChatInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
+  const [isBuilding, setIsBuilding] = useState(false);
   const chatMessagesEndRef = React.useRef<HTMLDivElement>(null);
 
   // Update node data
@@ -859,6 +860,59 @@ const WorkflowBuilder = ({ params }: { params: Promise<{ id: string }> }) => {
     );
   }, [nodeData, setNodes, updateNodeData]);
 
+  const handlePlayWorkflow = async () => {
+    setIsBuilding(true);
+    try {
+      const workflowData = {
+        nodes: nodes.map((node) => ({
+          ...node,
+          data: { ...node.data, nodeData: nodeData[node.id] || {} },
+        })),
+        edges,
+        nodeData,
+      };
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_SERVER_URL}/workflows/${resolvedParams.id}/build`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(workflowData),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log(result);
+
+      setIsChatOpen(true);
+
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: result.answer || "Workflow executed successfully.",
+        },
+      ]);
+    } catch (error: any) {
+      console.error("Error building workflow:", error);
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: `Workflow execution failed: ${
+            error.message || "Unknown error"
+          }`,
+        },
+      ]);
+    } finally {
+      setIsBuilding(false);
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!chatInput.trim()) return;
 
@@ -875,22 +929,20 @@ const WorkflowBuilder = ({ params }: { params: Promise<{ id: string }> }) => {
         message: userMessage,
         nodes: nodes.map((node) => ({
           ...node,
-          data: {
-            ...node.data,
-            nodeData: nodeData[node.id] || {},
-          },
+          data: { ...node.data, nodeData: nodeData[node.id] || {} },
         })),
         edges,
         nodeData,
       };
 
-      const response = await fetch("/api/chat/execute", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(workflowData),
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_SERVER_URL}/workflows/${resolvedParams.id}/chat`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(workflowData),
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -903,19 +955,16 @@ const WorkflowBuilder = ({ params }: { params: Promise<{ id: string }> }) => {
         {
           role: "assistant",
           content:
-            result.response ||
-            result.message ||
-            "I received your message but couldn't generate a response.",
+            result.response || result.message || "No response from server.",
         },
       ]);
-    } catch (error) {
-      console.error("Error sending message to backend:", error);
+    } catch (error: any) {
+      console.error("Error sending chat message:", error);
       setChatMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content:
-            "Sorry, I encountered an error while processing your message. Please try again.",
+          content: `Error: ${error.message || "Failed to process message."}`,
         },
       ]);
     } finally {
@@ -964,10 +1013,6 @@ const WorkflowBuilder = ({ params }: { params: Promise<{ id: string }> }) => {
                 <IoSave className="w-4 h-4" />
                 {isSaving ? "Saving..." : "Save"}
               </Button>
-
-              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                <IoPerson className="w-4 h-4 text-gray-600" />
-              </div>
             </div>
           </div>
         </div>
@@ -1058,7 +1103,7 @@ const WorkflowBuilder = ({ params }: { params: Promise<{ id: string }> }) => {
             <IoChatbubbleOutline className="w-5 h-5" />
           </Button>
           <Button
-            onClick={() => console.log("Play workflow triggered")}
+            onClick={() => handlePlayWorkflow()}
             className="absolute bottom-20 right-4 w-12 h-12 p-0 rounded-full shadow-lg"
             style={{ backgroundColor: "#4CAF50" }} // green-ish for "play"
           >
