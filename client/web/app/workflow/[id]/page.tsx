@@ -55,6 +55,7 @@ import {
   IoRemoveOutline,
   IoExpandOutline,
   IoPlayOutline,
+  IoHourglass,
 } from "react-icons/io5";
 import Image from "next/image";
 import ReactMarkdown from "react-markdown";
@@ -692,6 +693,21 @@ const WorkflowBuilder = ({ params }: { params: Promise<{ id: string }> }) => {
   const [isBuilding, setIsBuilding] = useState(false);
   const chatMessagesEndRef = React.useRef<HTMLDivElement>(null);
 
+  const compileWorkflow = () => {
+    const workflowData = {
+      nodes: nodes.map((node) => ({
+        ...node,
+        data: {
+          ...node.data,
+          nodeData: nodeData[node.id] || {},
+        },
+      })),
+      edges,
+      data: nodeData,
+    };
+    return workflowData;
+  };
+
   // Update node data
   const updateNodeData = useCallback(
     (nodeId: string, field: string, value: any) => {
@@ -709,17 +725,7 @@ const WorkflowBuilder = ({ params }: { params: Promise<{ id: string }> }) => {
   const saveWorkflow = useCallback(async () => {
     setIsSaving(true);
     try {
-      const workflowData = {
-        nodes: nodes.map((node) => ({
-          ...node,
-          data: {
-            ...node.data,
-            nodeData: nodeData[node.id] || {},
-          },
-        })),
-        edges,
-        data: nodeData,
-      };
+      const workflowData = compileWorkflow();
 
       await saveWorkflowBackend(resolvedParams.id, workflowData);
       console.log("Workflow saved successfully");
@@ -730,7 +736,6 @@ const WorkflowBuilder = ({ params }: { params: Promise<{ id: string }> }) => {
     }
   }, [resolvedParams.id, nodes, edges, nodeData]);
 
-  // Load workflow on mount
   useEffect(() => {
     const loadWorkflow = async () => {
       try {
@@ -862,6 +867,8 @@ const WorkflowBuilder = ({ params }: { params: Promise<{ id: string }> }) => {
 
   const handlePlayWorkflow = async () => {
     setIsBuilding(true);
+    const workflowData = compileWorkflow();
+    await saveWorkflowBackend(resolvedParams.id, workflowData);
     try {
       const workflowData = {
         nodes: nodes.map((node) => ({
@@ -887,6 +894,7 @@ const WorkflowBuilder = ({ params }: { params: Promise<{ id: string }> }) => {
 
       const result = await response.json();
       console.log(result);
+      setChatMessages([]);
 
       setIsChatOpen(true);
 
@@ -1102,13 +1110,23 @@ const WorkflowBuilder = ({ params }: { params: Promise<{ id: string }> }) => {
           >
             <IoChatbubbleOutline className="w-5 h-5" />
           </Button>
-          <Button
-            onClick={() => handlePlayWorkflow()}
-            className="absolute bottom-20 right-4 w-12 h-12 p-0 rounded-full shadow-lg"
-            style={{ backgroundColor: "#4CAF50" }} // green-ish for "play"
-          >
-            <IoPlayOutline className="w-5 h-5" />
-          </Button>
+          {!isBuilding ? (
+            <Button
+              onClick={() => handlePlayWorkflow()}
+              className="absolute bottom-20 right-4 w-12 h-12 p-0 rounded-full shadow-lg"
+              style={{ backgroundColor: "#4CAF50" }}
+            >
+              <IoPlayOutline className="w-5 h-5" />
+            </Button>
+          ) : (
+            <Button
+              disabled
+              className="absolute bottom-20 right-4 w-12 h-12 p-0 rounded-full shadow-lg"
+              style={{ backgroundColor: "#4CAF50" }}
+            >
+              <IoHourglass className="w-5 h-5 animate-spin" />
+            </Button>
+          )}
         </div>
       </div>
 
