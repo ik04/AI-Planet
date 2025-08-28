@@ -18,7 +18,7 @@ class StackRead(BaseModel):
     id: str
     name: str
     description: Optional[str]
-    created_at: datetime  # Changed from Optional[str] to datetime
+    created_at: datetime  
 
     class Config:
         orm_mode = True
@@ -33,7 +33,7 @@ async def get_db():
 @router.post("/", response_model=StackRead)
 async def create_stack(stack: StackCreate, db: AsyncSession = Depends(get_db)):
     new_stack = Stack(
-        id=str(uuid.uuid4()),  # Use UUID instead of hash
+        id=str(uuid.uuid4()),  
         name=stack.name,
         description=stack.description
     )

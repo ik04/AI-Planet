@@ -266,7 +266,6 @@ async def build_workflow(stack_id: str, db: AsyncSession = Depends(get_db)):
 
 @router.post("/{stack_id}/chat", response_model=ChatResponse)
 async def chat_with_workflow(stack_id: str, req: ChatRequest, db: AsyncSession = Depends(get_db)):
-    # 1. Fetch workflow
     result = await db.execute(select(Workflow).where(Workflow.stack_id == stack_id))
     workflow = result.scalar_one_or_none()
     if not workflow:
@@ -279,10 +278,8 @@ async def chat_with_workflow(stack_id: str, req: ChatRequest, db: AsyncSession =
     if "llm" not in node_types:
         raise HTTPException(status_code=400, detail="Workflow missing LLM node")
 
-    # 2. User query
     user_query = req.message
 
-    # 3. Knowledge base (just query existing vectors)
     retrieved_docs = []
     model = None
     collection = None
@@ -316,7 +313,6 @@ async def chat_with_workflow(stack_id: str, req: ChatRequest, db: AsyncSession =
 
     genai.configure(api_key=gemini_key)
 
-    # 5. Optional web search
     web_context = ""
     if use_web and serpapi_key:
         try:
@@ -329,7 +325,6 @@ async def chat_with_workflow(stack_id: str, req: ChatRequest, db: AsyncSession =
         except Exception as e:
             logger.error(f"SerpAPI search failed: {e}")
 
-    # 6. Build final prompt
     kb_context = "\n".join(retrieved_docs) if retrieved_docs else ""
 
     output_node = node_types.get("output")
@@ -344,7 +339,6 @@ async def chat_with_workflow(stack_id: str, req: ChatRequest, db: AsyncSession =
     combined_context = "\n\n".join([c for c in [kb_context, web_context] if c.strip()])
     prompt = f"Context:\n{combined_context}{output_data_str}\n\nUser Query: {user_query}\nAnswer:"
 
-    # 7. Call Gemini
     llm = genai.GenerativeModel(gemini_model)
     response = llm.generate_content(prompt)
 
@@ -368,24 +362,20 @@ async def upload_document(
     file_id = str(uuid.uuid4())
     file_path = os.path.join(UPLOAD_DIR, f"{file_id}_{file.filename}")
 
-    # Save file
     with open(file_path, "wb") as f:
         f.write(await file.read())
 
-    # Fetch workflow
     result = await db.execute(select(Workflow).where(Workflow.stack_id == stack_id))
     workflow = result.scalar_one_or_none()
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
 
-    # Ensure workflow.data is a dict
     if not isinstance(workflow.data, dict):
         try:
             workflow.data = json.loads(workflow.data) if workflow.data else {}
         except Exception:
             workflow.data = {}
 
-    # Append doc metadata
     workflow.data.setdefault("documents", [])
     workflow.data["documents"].append({
         "id": file_id,
@@ -393,7 +383,6 @@ async def upload_document(
         "path": file_path
     })
 
-    # Commit
     db.add(workflow)
     await db.commit()
     await db.refresh(workflow)
@@ -453,7 +442,6 @@ async def update_workflow(
     workflow_data: WorkflowData,
     db: AsyncSession = Depends(get_db)
 ):
-    # Try to get existing workflow
     result = await db.execute(
         select(Workflow).where(Workflow.stack_id == stack_id)
     )
