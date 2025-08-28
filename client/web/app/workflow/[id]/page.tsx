@@ -933,22 +933,15 @@ const WorkflowBuilder = ({ params }: { params: Promise<{ id: string }> }) => {
     setChatInput("");
 
     try {
-      const workflowData = {
-        message: userMessage,
-        nodes: nodes.map((node) => ({
-          ...node,
-          data: { ...node.data, nodeData: nodeData[node.id] || {} },
-        })),
-        edges,
-        nodeData,
-      };
+      const workflowData = compileWorkflow();
+      await saveWorkflowBackend(resolvedParams.id, workflowData);
 
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_SERVER_URL}/workflows/${resolvedParams.id}/chat`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(workflowData),
+          body: JSON.stringify({ message: userMessage }),
         }
       );
 
