@@ -1180,7 +1180,7 @@ const WorkflowBuilder = ({ params }: { params: Promise<{ id: string }> }) => {
                             className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-2xl"
                             style={{ backgroundColor: "#D2FFD1" }}
                           >
-                            🤖
+                            <IoSparkles className="w-6 h-6" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="rounded-lg pt-1.5 prose prose-sm max-w-none text-gray-800">
@@ -1250,7 +1250,7 @@ const WorkflowBuilder = ({ params }: { params: Promise<{ id: string }> }) => {
                             className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-2xl"
                             style={{ backgroundColor: "#C0DAFF" }}
                           >
-                            👨🏻‍💻
+                            <IoPerson className="w-6 h-6" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="rounded-2xl pt-2 py-3">
