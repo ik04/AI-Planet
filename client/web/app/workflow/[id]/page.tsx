@@ -1057,6 +1057,13 @@ const WorkflowBuilder = ({ params }: { params: Promise<{ id: string }> }) => {
           >
             <IoChatbubbleOutline className="w-5 h-5" />
           </Button>
+          <Button
+            onClick={() => console.log("Play workflow triggered")}
+            className="absolute bottom-20 right-4 w-12 h-12 p-0 rounded-full shadow-lg"
+            style={{ backgroundColor: "#4CAF50" }} // green-ish for "play"
+          >
+            <IoPlayOutline className="w-5 h-5" />
+          </Button>
         </div>
       </div>
 
