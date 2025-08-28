@@ -555,7 +555,14 @@ const CustomNode = ({ data, selected }: any) => {
                 <Textarea
                   placeholder="Output will be generated based on query"
                   className="text-xs min-h-[60px] bg-[#F6F6F6] shadow-none border-none resize-none"
-                  disabled
+                  value={data.nodeData?.outputText || ""}
+                  onChange={(e) =>
+                    data.updateNodeData?.(
+                      data.nodeId,
+                      "outputText",
+                      e.target.value
+                    )
+                  }
                 />
               </div>
             </div>

@@ -238,8 +238,16 @@ async def build_workflow(stack_id: str, db: AsyncSession = Depends(get_db)):
     kb_context = "\n".join(retrieved_docs) if retrieved_docs else ""
     combined_context = "\n\n".join([c for c in [kb_context, web_context] if c.strip()])
 
+    output_node = node_types.get("output")
+    output_data_str = ""
+    if output_node:
+        output_node_data = output_node.get("data", {}).get("nodeData", {})
+        if output_data_data := output_node_data.get("outputText"):
+            output_data_str = f"\n\nOutput: {output_data_data}"
+
+
     logger.info(f"📝 Building prompt (context length={len(combined_context)})")
-    prompt = f"Context:\n{combined_context}\n\nUser Query: {user_query}\nAnswer:"
+    prompt = f"Context:\n{combined_context}{output_data_str}\n\nUser Query: {user_query}\nAnswer:"
 
     # 8. Call Gemini
     llm = genai.GenerativeModel(gemini_model)
@@ -265,6 +273,7 @@ async def chat_with_workflow(stack_id: str, req: ChatRequest, db: AsyncSession =
         raise HTTPException(status_code=404, detail="Workflow not found")
 
     nodes = workflow.nodes or []
+    print(nodes)
     node_types = {n["data"]["type"]: n for n in nodes}
 
     if "llm" not in node_types:
@@ -322,8 +331,18 @@ async def chat_with_workflow(stack_id: str, req: ChatRequest, db: AsyncSession =
 
     # 6. Build final prompt
     kb_context = "\n".join(retrieved_docs) if retrieved_docs else ""
+
+    output_node = node_types.get("output")
+    output_data_str = ""
+    if output_node:
+        output_node_data = output_node.get("data", {}).get("nodeData", {})
+        if output_data_data := output_node_data.get("outputText"):
+            output_data_str = f"\n\nOutput: {output_data_data}"
+    
+    print("Output Node Data:", output_data_str)
+
     combined_context = "\n\n".join([c for c in [kb_context, web_context] if c.strip()])
-    prompt = f"Context:\n{combined_context}\n\nUser Query: {user_query}\nAnswer:"
+    prompt = f"Context:\n{combined_context}{output_data_str}\n\nUser Query: {user_query}\nAnswer:"
 
     # 7. Call Gemini
     llm = genai.GenerativeModel(gemini_model)
